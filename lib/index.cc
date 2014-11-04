@@ -144,7 +144,7 @@ filter_filter (GMimeFilter *gmime_filter, char *inbuf, size_t inlen, size_t pres
 	{9,  ' ',  ' ',  10, 0},
 	{10, '\n', '\n', 11, 10},
 	{11, 'M',  'M',  12, 0},
-	{12, ' ',  '`',  12, 11}  
+	{12, ' ',  '`',  12, 11}
     };
     int next;
 
@@ -363,11 +363,24 @@ _index_mime_part (notmuch_message_t *message,
     }
 
     disposition = g_mime_object_get_content_disposition (part);
-    if (disposition &&
-	strcmp (disposition->disposition, GMIME_DISPOSITION_ATTACHMENT) == 0)
-    {
-	const char *filename = g_mime_part_get_filename (GMIME_PART (part));
-
+    const char *filename = g_mime_part_get_filename (GMIME_PART (part));
+    if (disposition
+	&&
+	(
+	    // files with the disposition attachment are obviously
+	    // considered as attachment
+	    strcmp (disposition->disposition, GMIME_DISPOSITION_ATTACHMENT) == 0
+	    ||
+	    (
+		// MUAs like AppleMail attach files with disposition
+		// inline. We may find such file taking a look at the
+		// filename keyword parameter
+		strcmp (disposition->disposition, GMIME_DISPOSITION_INLINE) == 0
+		&&
+		filename
+	    )
+	)
+       ) {
 	_notmuch_message_add_term (message, "tag", "attachment");
 	_notmuch_message_gen_terms (message, "attachment", filename);
 
